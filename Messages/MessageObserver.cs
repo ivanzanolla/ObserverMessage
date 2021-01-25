@@ -4,7 +4,7 @@ using System.Threading.Tasks.Dataflow;
 
 namespace Messages
 {
-    internal class MessageObserver<TMessage> : IMessageObserver<TMessage> 
+    internal class MessageObserver<TMessage> : IMessageObserver<TMessage>
         where TMessage : IBaseMessage
     {
         private readonly ActionBlock<TMessage> _actionBlock;
@@ -19,7 +19,7 @@ namespace Messages
 
         public MessageObserver(Action<TMessage> action, string systemName)
         {
-            _actionBlock = new ActionBlock<TMessage>(m => action(m));
+            _actionBlock = new ActionBlock<TMessage>(action);
             _systemName = systemName;
             Id = id++;
         }
