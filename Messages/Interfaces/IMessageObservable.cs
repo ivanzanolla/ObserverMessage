@@ -2,11 +2,11 @@
 
 namespace Messages.Interfaces
 {
-    internal interface IMessageObservable<Observer, Message>
-        where Observer : IMessageObserver<Message>
-        where Message : IBaseMessage
+    internal interface IMessageObservable<TObserver, TMessage> : IObservable<TMessage>
+        where TObserver : IMessageObserver<TMessage>
+        where TMessage : IBaseMessage
     {
-        void Publish(Message message);
-        IDisposable Subscribe(IObserver<Message> observer);
+        void Publish(TMessage message);
+
     }
 }

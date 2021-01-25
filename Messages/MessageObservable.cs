@@ -6,33 +6,33 @@ using System.Threading.Tasks;
 
 namespace Messages
 {
-    internal class MessageObservable<Observer, Message> : IObservable<Message>, IMessageObservable<Observer, Message> 
-        where Observer : IMessageObserver<Message>
-        where Message : IBaseMessage
+    internal class MessageObservable<TObserver, TMessage> : IMessageObservable<TObserver, TMessage> 
+        where TObserver : IMessageObserver<TMessage>
+        where TMessage : IBaseMessage
 
     {
-        private readonly List<Observer> _observers;
+        private readonly List<TObserver> _observers;
 
 
 
         public MessageObservable()
         {
-            _observers = new List<Observer>();
+            _observers = new List<TObserver>();
         }
 
-        public IDisposable Subscribe(IObserver<Message> observer)
+        public IDisposable Subscribe(IObserver<TMessage> observer)
         {
-            var casted = (Observer)observer;
+            var casted = (TObserver)observer;
 
             if (!_observers.Contains(casted))
             {
                 _observers.Add(casted);
             }
 
-            return new Unsubscriber<Observer, Message>(_observers, casted);
+            return new Unsubscriber<TObserver, TMessage>(_observers, casted);
         }
 
-        public void Publish(Message message)
+        public void Publish(TMessage message)
         {
 
             var observers = _observers.Where(o => o.SystemName.Equals(message.SystemName));

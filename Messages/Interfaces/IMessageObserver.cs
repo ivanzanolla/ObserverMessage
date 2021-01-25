@@ -1,10 +1,11 @@
-﻿namespace Messages.Interfaces
+﻿using System;
+
+namespace Messages.Interfaces
 {
-    public interface IMessageObserver<Message> where Message : IBaseMessage
+    public interface IMessageObserver<TMessage> : IObserver<TMessage>
+        where TMessage : IBaseMessage
     {
         int Id { get; }
         string SystemName { get; }
-
-        void OnNext(Message message);
     }
 }

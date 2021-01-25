@@ -4,10 +4,10 @@ using System.Threading.Tasks.Dataflow;
 
 namespace Messages
 {
-    internal class MessageObserver<Message> : IObserver<Message>, IMessageObserver<Message> 
-        where Message : IBaseMessage
+    internal class MessageObserver<TMessage> : IMessageObserver<TMessage> 
+        where TMessage : IBaseMessage
     {
-        private readonly ActionBlock<Message> _actionBlock;
+        private readonly ActionBlock<TMessage> _actionBlock;
 
         private readonly string _systemName;
         public string SystemName => _systemName;
@@ -17,9 +17,9 @@ namespace Messages
 
         private static int id = 1;
 
-        public MessageObserver(Action<Message> action, string systemName)
+        public MessageObserver(Action<TMessage> action, string systemName)
         {
-            _actionBlock = new ActionBlock<Message>(m => action(m));
+            _actionBlock = new ActionBlock<TMessage>(m => action(m));
             _systemName = systemName;
             Id = id++;
         }
@@ -35,7 +35,7 @@ namespace Messages
         {
         }
 
-        public void OnNext(Message message)
+        public void OnNext(TMessage message)
         {
             _actionBlock.Post(message);
         }
