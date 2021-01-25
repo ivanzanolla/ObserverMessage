@@ -14,7 +14,7 @@ namespace ObserverMessage
             int id1 = _messageService.Subscribe(OnReceive1, Message.Name);
             int id2 = _messageService.Subscribe(OnReceive2, Message.Name);
 
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 1000; i++)
             {
                 var message = new Message
                 {
@@ -25,6 +25,7 @@ namespace ObserverMessage
 
             }
 
+            Console.ReadLine();
 
             _messageService.UnSuscribe(id1);
             _messageService.UnSuscribe(id2);
@@ -36,7 +37,7 @@ namespace ObserverMessage
             {
                 var msg = (Message)obj;
 
-                System.Diagnostics.Debug.WriteLine($" {nameof(OnReceive1)} TimeStapm: {DateTime.Now.Millisecond} {msg.SystemName} {msg.Inc}");
+               Console.WriteLine($" {nameof(OnReceive1)} TimeStapm: {DateTime.Now.Millisecond} {msg.SystemName} {msg.Inc}");
 
 
             }
@@ -49,7 +50,7 @@ namespace ObserverMessage
             {
                 var msg = (Message)obj;
 
-                System.Diagnostics.Debug.WriteLine($" {nameof(OnReceive2)} TimeStapm: {DateTime.Now.Millisecond} {msg.SystemName} {msg.Inc}");
+                Console.WriteLine($" {nameof(OnReceive2)} TimeStapm: {DateTime.Now.Millisecond} {msg.SystemName} {msg.Inc}");
             }
         }
 

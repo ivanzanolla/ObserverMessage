@@ -1,46 +1,32 @@
 ﻿using Messages.Interfaces;
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Collections.Concurrent;
 
 namespace Messages
 {
-    internal class Unsubscriber<Observer, Message> : IDisposable
-       where Observer : IMessageObserver<Message>
-       where Message : IBaseMessage
+    internal class Unsubscriber<TObserver, TMessage> : IDisposable
+       where TObserver : IMessageObserver<TMessage>
+       where TMessage : IBaseMessage
     {
-        private readonly IList<Observer> _observers;
-        private readonly Observer _observer;
+        private readonly ConcurrentDictionary<int, TObserver> _observers;
+        private readonly TObserver _observer;
 
-        public Unsubscriber(List<Observer> observers, Observer observer)
+
+        public Unsubscriber(ConcurrentDictionary<int, TObserver> observers, TObserver observer)
         {
             _observers = observers;
             _observer = observer;
         }
 
-
-        /// <summary>
-        /// Dispose all the observer
-        /// </summary>
         public void Dispose()
         {
-            if (_observers.Contains(_observer))
-                _observers.Remove(_observer);
+            _ = _observers.TryRemove(_observer.Id, out _);
         }
 
 
-        /// <summary>
-        /// Dispose specific observer
-        /// </summary>
-        /// <param name="id"></param>
         public void Dispose(int id)
         {
-            var o = _observers.SingleOrDefault(o => o.Id == id);
-
-            if (o != null)
-            {
-                _observers.Remove(o);
-            }
+            _ = _observers.TryRemove(id, out _);
         }
     }
 

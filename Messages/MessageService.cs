@@ -19,7 +19,7 @@ namespace Messages
         #region Singleton
 
         // laziness + thread safety
-        private static Lazy<MessageService> instance = new Lazy<MessageService>(() =>
+        private static readonly Lazy<MessageService> instance = new Lazy<MessageService>(() =>
         {
             return new MessageService();
         });
@@ -67,6 +67,7 @@ namespace Messages
         /// <param name="id"></param>
         public void UnSuscribe(int id)
         {
+
             foreach (var disposable in _disposables)
             {
                 disposable.Dispose(id);
