@@ -9,7 +9,9 @@ namespace Microsoft.Extensions.DependencyInjection
     {
         /// <summary>
         /// Registers the event bus as a singleton <see cref="IMessageService"/>.
-        /// Calling it more than once keeps the first registration. The container disposes
+        /// Safe to call any number of times: the bus is registered once, and every
+        /// <paramref name="configure"/> callback is applied to its options in registration order,
+        /// so a later callback overrides an earlier one. The container disposes
         /// the bus on shutdown, which stops every subscription.
         /// </summary>
         public static IServiceCollection AddObserverMessage(
@@ -18,11 +20,26 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             if (services == null) throw new ArgumentNullException(nameof(services));
 
-            var options = new MessageServiceOptions();
-            configure?.Invoke(options);
+            if (configure != null)
+                services.AddSingleton(new ObserverMessageConfigurator(configure));
 
-            services.TryAddSingleton<IMessageService>(_ => new MessageService(options));
+            services.TryAddSingleton<IMessageService>(sp =>
+            {
+                var options = new MessageServiceOptions();
+                foreach (var configurator in sp.GetServices<ObserverMessageConfigurator>())
+                    configurator.Apply(options);
+                return new MessageService(options);
+            });
             return services;
         }
+    }
+
+    internal sealed class ObserverMessageConfigurator
+    {
+        private readonly Action<MessageServiceOptions> _configure;
+
+        public ObserverMessageConfigurator(Action<MessageServiceOptions> configure) => _configure = configure;
+
+        public void Apply(MessageServiceOptions options) => _configure(options);
     }
 }
