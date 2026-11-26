@@ -2,44 +2,120 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Messages
 {
-    internal class MessageObservable<TObserver, TMessage> : IMessageObservable<TObserver, TMessage>
-        where TObserver : IMessageObserver<TMessage>
-        where TMessage : IBaseMessage
+    /// <summary>
+    /// The subject of the Observer pattern: keeps the observers and forwards each
+    /// published message to the ones whose filter accepts it.
+    /// </summary>
+    internal sealed class MessageObservable : IObservable<IBaseMessage>
     {
-        private readonly ConcurrentDictionary<int, TObserver> _observers;
+        private readonly ConcurrentDictionary<int, MessageObserver> _observers =
+            new ConcurrentDictionary<int, MessageObserver>();
 
-        public MessageObservable()
+        private readonly int _boundedCapacity;
+        private readonly Action<int, IBaseMessage, Exception> _onHandlerError;
+        private readonly Action<int, IBaseMessage> _onDropped;
+
+        public MessageObservable(
+            int boundedCapacity,
+            Action<int, IBaseMessage, Exception> onHandlerError,
+            Action<int, IBaseMessage> onDropped)
         {
-            _observers = new ConcurrentDictionary<int, TObserver>();
+            _boundedCapacity = boundedCapacity;
+            _onHandlerError = onHandlerError;
+            _onDropped = onDropped;
         }
 
-        public IDisposable Subscribe(IObserver<TMessage> observer)
+        public int Count => _observers.Count;
+
+        public MessageObserver Add(Func<IBaseMessage, bool> filter, Func<IBaseMessage, Task> handler, Action onCompleted = null)
         {
-            var casted = (TObserver)observer;
-
-            _observers.TryAdd(casted.Id, casted);
-
-            return new Unsubscriber<TObserver, TMessage>(_observers, casted);
+            var observer = new MessageObserver(filter, handler, _onHandlerError, _boundedCapacity, onCompleted);
+            _observers[observer.Id] = observer;
+            return observer;
         }
 
-        public void Publish(TMessage message)
+        /// <summary>Subscribes any <see cref="IObserver{T}"/> (for example an Rx observer) to every message.</summary>
+        public IDisposable Subscribe(IObserver<IBaseMessage> observer)
         {
-            var observers = _observers.Where(o => o.Value.SystemName.Equals(message.SystemName));
+            if (observer == null) throw new ArgumentNullException(nameof(observer));
 
-            Parallel.ForEach(observers, (obs) =>
+            var added = Add(
+                _ => true,
+                message =>
+                {
+                    observer.OnNext(message);
+                    return Task.CompletedTask;
+                },
+                observer.OnCompleted);
+
+            return new Unsubscriber(this, added.Id);
+        }
+
+        /// <summary>Stops and removes one observer. False if the id is unknown or already removed.</summary>
+        public bool Remove(int id)
+        {
+            if (!_observers.TryRemove(id, out var observer)) return false;
+            observer.Stop();
+            return true;
+        }
+
+        public void RemoveAll()
+        {
+            foreach (var id in _observers.Keys)
             {
-                obs.Value.OnNext(message);
-            });
+                Remove(id);
+            }
+        }
 
+        /// <summary>Removes every observer and tells each one that the sequence has ended.</summary>
+        public void CompleteAll()
+        {
+            foreach (var id in _observers.Keys)
+            {
+                if (_observers.TryRemove(id, out var observer))
+                {
+                    observer.OnCompleted();
+                }
+            }
+        }
 
+        public void Publish(IBaseMessage message)
+        {
+            foreach (var observer in Matching(message))
+            {
+                if (!observer.TryEnqueue(message) && observer.IsActive)
+                {
+                    _onDropped?.Invoke(observer.Id, message);
+                }
+            }
+        }
+
+        public Task PublishAsync(IBaseMessage message, CancellationToken cancellationToken)
+        {
+            var sends = new List<Task>();
+            foreach (var observer in Matching(message))
+            {
+                sends.Add(observer.EnqueueAsync(message, cancellationToken));
+            }
+            return Task.WhenAll(sends);
+        }
+
+        private IEnumerable<MessageObserver> Matching(IBaseMessage message)
+        {
+            if (message == null) throw new ArgumentNullException(nameof(message));
+
+            foreach (var pair in _observers)
+            {
+                if (pair.Value.Accepts(message))
+                {
+                    yield return pair.Value;
+                }
+            }
         }
     }
-
-
-
 }
