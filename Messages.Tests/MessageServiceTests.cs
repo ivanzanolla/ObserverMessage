@@ -42,7 +42,7 @@ namespace Messages.Tests
             bus.Publish(new Ping(1));
             bus.Publish(new Ping(2));
 
-            Assert.Equal(2, await received.Task.WaitAsync(Timeout));
+            Assert.Equal(2, await received.Task.WithTimeout(Timeout));
             var error = Assert.Single(errors);
             Assert.Equal(id, error.SubscriptionId);
             Assert.Equal("boom", error.Exception.Message);
@@ -82,7 +82,7 @@ namespace Messages.Tests
             bus.Publish(new Ping(1));
             bus.Publish(new Ping(2));
             bus.Publish(new Ping(3));
-            await started.Task.WaitAsync(Timeout);
+            await started.Task.WithTimeout(Timeout);
 
             Assert.True(bus.Unsubscribe(id));
             Assert.False(bus.Unsubscribe(id));
@@ -122,7 +122,7 @@ namespace Messages.Tests
 
             bus.Publish(new Pong());
             bus.Publish(new Ping(7));
-            await pings.Task.WaitAsync(Timeout);
+            await pings.Task.WithTimeout(Timeout);
             await Task.Delay(100);
 
             Assert.Equal(new[] { 7 }, calls.ToArray());
@@ -140,7 +140,7 @@ namespace Messages.Tests
 
             bus.Publish(new Pong());
             bus.Publish(new Ping());
-            await done.Task.WaitAsync(Timeout);
+            await done.Task.WithTimeout(Timeout);
             await Task.Delay(100);
 
             Assert.Equal(new[] { Ping.Name }, received.ToArray());
@@ -161,7 +161,7 @@ namespace Messages.Tests
             });
 
             for (int i = 0; i < count; i++) bus.Publish(new Ping(i));
-            await done.Task.WaitAsync(Timeout);
+            await done.Task.WithTimeout(Timeout);
 
             Assert.Equal(Enumerable.Range(0, count), received);
         }
@@ -179,7 +179,7 @@ namespace Messages.Tests
             });
 
             bus.Publish(new Ping(3));
-            Assert.Equal(3, await done.Task.WaitAsync(Timeout));
+            Assert.Equal(3, await done.Task.WithTimeout(Timeout));
         }
 
         [Fact]
@@ -194,7 +194,7 @@ namespace Messages.Tests
             bus.Subscribe<Ping>(_ => { started.TrySetResult(true); gate.Wait(); });
 
             bus.Publish(new Ping(1));
-            await started.Task.WaitAsync(Timeout);
+            await started.Task.WithTimeout(Timeout);
             bus.Publish(new Ping(2));
             bus.Publish(new Ping(3));
 
@@ -211,14 +211,14 @@ namespace Messages.Tests
             bus.Subscribe<Ping>(_ => { started.TrySetResult(true); gate.Wait(); });
 
             await bus.PublishAsync(new Ping(1));
-            await started.Task.WaitAsync(Timeout);
+            await started.Task.WithTimeout(Timeout);
 
             var second = bus.PublishAsync(new Ping(2));
             await Task.Delay(100);
             Assert.False(second.IsCompleted);
 
             gate.Release();
-            await second.WaitAsync(Timeout);
+            await second.WithTimeout(Timeout);
             gate.Release();
         }
 
@@ -236,7 +236,7 @@ namespace Messages.Tests
 
             var token = bus.Subscribe(observer);
             bus.Publish(new Ping(1));
-            await observer.FirstMessage.Task.WaitAsync(Timeout);
+            await observer.FirstMessage.Task.WithTimeout(Timeout);
 
             token.Dispose();
             bus.Publish(new Ping(2));

@@ -41,7 +41,7 @@ namespace Messages.Tests
             bus.Subscribe<Ping>(_ => { started.TrySetResult(true); gate.Wait(); });
 
             bus.Publish(new Ping(1));
-            await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await started.Task.WithTimeout(TimeSpan.FromSeconds(5));
             bus.Publish(new Ping(2));
 
             Assert.Equal(new[] { 2 }, dropped.ToArray());
