@@ -72,6 +72,11 @@ namespace Messages
             {
                 await _handler(message, _cts.Token).ConfigureAwait(false);
             }
+            catch (OperationCanceledException) when (_cts.IsCancellationRequested)
+            {
+                // The subscription stopped while the handler was running and the handler
+                // honoured the token: that is a clean stop, not a failure.
+            }
             catch (Exception ex)
             {
                 // Never let an exception escape: it would fault the ActionBlock

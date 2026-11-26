@@ -37,6 +37,9 @@ namespace Messages.Tests
 
         public SemaphoreSlim Signal { get; } = new SemaphoreSlim(0);
 
+        /// <summary>Released when a <see cref="BlockingHandler"/> invocation has ended.</summary>
+        public SemaphoreSlim Finished { get; } = new SemaphoreSlim(0);
+
         public void Add(int n, ScopeProbe probe, AsyncOnlyResource resource)
         {
             Entries.Enqueue((n, probe.Id, probe, resource));
@@ -108,7 +111,14 @@ namespace Messages.Tests
         {
             _log.Tokens.Enqueue(cancellationToken);
             _log.Signal.Release();
-            await Task.Delay(-1, cancellationToken);
+            try
+            {
+                await Task.Delay(-1, cancellationToken);
+            }
+            finally
+            {
+                _log.Finished.Release();
+            }
         }
     }
 
@@ -136,6 +146,7 @@ namespace Messages.Tests
             var log = provider.GetRequiredService<HandlerLog>();
             _disposables.Add(provider);
             _disposables.Add(log.Signal);
+            _disposables.Add(log.Finished);
             return (provider, provider.GetRequiredService<IMessageService>(), log);
         }
 
@@ -262,14 +273,19 @@ namespace Messages.Tests
         public async Task Disposing_the_container_cancels_running_handlers()
         {
             var (provider, bus, log) = Build(s => s.AddMessageHandler<Ping, BlockingHandler>());
+            var errors = new ConcurrentQueue<HandlerErrorEventArgs>();
+            bus.HandlerError += (_, e) => errors.Enqueue(e);
 
             bus.Publish(new Ping(1));
             await log.Signal.WaitAsync().WithTimeout(Limit);
             log.Tokens.TryPeek(out var token);
 
             provider.Dispose();
+            await log.Finished.WaitAsync().WithTimeout(Limit);
+            await Task.Delay(200); // let the bus finish the cancelled invocation
 
             Assert.True(token.IsCancellationRequested);
+            Assert.Empty(errors); // cancellation at shutdown is not a handler failure
         }
 
         [Fact]
@@ -277,17 +293,31 @@ namespace Messages.Tests
         {
             using var bus = new MessageService();
             var recorded = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var finished = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var errors = new ConcurrentQueue<HandlerErrorEventArgs>();
+            bus.HandlerError += (_, e) => errors.Enqueue(e);
             var id = bus.Subscribe<Ping>(async (_, ct) =>
             {
                 recorded.TrySetResult(ct);
-                await Task.Delay(-1, ct);
+                try
+                {
+                    await Task.Delay(-1, ct);
+                }
+                finally
+                {
+                    finished.TrySetResult(true);
+                }
             });
 
             bus.Publish(new Ping(1));
             var token = await recorded.Task.WithTimeout(Limit);
 
             Assert.True(bus.Unsubscribe(id));
+            await finished.Task.WithTimeout(Limit);
+            await Task.Delay(200); // let the bus finish the cancelled invocation
+
             Assert.True(token.IsCancellationRequested);
+            Assert.Empty(errors); // cancellation on Unsubscribe is not a handler failure
         }
     }
 }
