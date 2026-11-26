@@ -52,6 +52,26 @@ namespace Messages.Tests
         }
 
         [Fact]
+        public async Task AddObserverMessage_after_AddMessageHandler_still_applies_options()
+        {
+            var services = new ServiceCollection();
+            services.AddSingleton<HandlerLog>();
+            services.AddMessageHandler<Ping, BlockingHandler>();     // the real call, which registers the bus itself
+            services.AddObserverMessage(o => o.BoundedCapacity = 1);
+            using var provider = services.BuildServiceProvider();
+            var log = provider.GetRequiredService<HandlerLog>();
+            var bus = provider.GetRequiredService<IMessageService>();
+            var dropped = new ConcurrentBag<int>();
+            bus.MessageDropped += (_, e) => dropped.Add(((Ping)e.Message).N);
+
+            bus.Publish(new Ping(1));
+            await log.Signal.WaitAsync().WithTimeout(TimeSpan.FromSeconds(5)); // the handler is now blocked on message 1
+            bus.Publish(new Ping(2));
+
+            Assert.Equal(new[] { 2 }, dropped.ToArray());
+        }
+
+        [Fact]
         public async Task Later_option_callbacks_override_earlier_ones()
         {
             var services = new ServiceCollection();

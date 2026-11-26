@@ -122,6 +122,20 @@ namespace Messages.Tests
         }
     }
 
+    /// <summary>A singleton that publishes from its own Dispose, i.e. while the container is shutting down.</summary>
+    public sealed class ShutdownPublisher : IDisposable
+    {
+        private readonly IMessageService _bus;
+
+        public ShutdownPublisher(IMessageService bus) => _bus = bus;
+
+        public void Dispose()
+        {
+            _bus.Publish(new Ping(1));
+            Thread.Sleep(200); // let the queued invocation run while the container is disposing
+        }
+    }
+
     public sealed class MessageHandlerTests : IDisposable
     {
         private static readonly TimeSpan Limit = TimeSpan.FromSeconds(5);
@@ -261,11 +275,16 @@ namespace Messages.Tests
         {
             var (_, bus, log) = Build(s => s.AddMessageHandler<Ping, RecordingHandler>());
 
+            var errors = new ConcurrentQueue<HandlerErrorEventArgs>();
+            bus.HandlerError += (_, e) => errors.Enqueue(e);
+
             bus.Publish(new Pong());
             bus.Publish(new Ping(3));
             await log.Signal.WaitAsync().WithTimeout(Limit);
-            await Task.Delay(100);
 
+            // Messages are processed in order, so a Pong that got through the filter would
+            // already have failed (InvalidCastException into HandlerError) before Ping(3) ran.
+            Assert.Empty(errors);
             Assert.Equal(new[] { 3 }, log.Entries.Select(e => e.N));
         }
 
@@ -286,6 +305,25 @@ namespace Messages.Tests
 
             Assert.True(token.IsCancellationRequested);
             Assert.Empty(errors); // cancellation at shutdown is not a handler failure
+        }
+
+        [Fact]
+        public void Messages_queued_while_the_container_is_disposing_are_dropped_silently()
+        {
+            var (provider, bus, log) = Build(s =>
+            {
+                s.AddMessageHandler<Ping, RecordingHandler>();
+                s.AddSingleton<ShutdownPublisher>();
+            });
+            var errors = new ConcurrentQueue<HandlerErrorEventArgs>();
+            bus.HandlerError += (_, e) => errors.Enqueue(e);
+            // Resolved after the bus, so the container disposes it first, while the bus still runs.
+            provider.GetRequiredService<ShutdownPublisher>();
+
+            provider.Dispose(); // ShutdownPublisher.Dispose publishes and waits for the invocation to settle
+
+            Assert.Empty(errors); // a container that is gone is a clean stop, not a handler failure
+            Assert.Empty(log.Entries);
         }
 
         [Fact]

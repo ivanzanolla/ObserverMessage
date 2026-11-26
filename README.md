@@ -106,7 +106,9 @@ builder.Services.AddMessageHandler<OrderPlaced, OrderEmailHandler>();
 
 Every message gets a new scope and a new handler instance, so scoped services are safe and are disposed
 after each message. The `CancellationToken` is cancelled when the subscription stops, for example at
-application shutdown.
+application shutdown. At shutdown, in-flight handlers may see already-disposed singletons; messages queued
+after the container starts disposing are dropped silently. `UnsubscribeAll()` and `Dispose()` on the bus also
+permanently remove the handler subscriptions registered through the container.
 
 For a delegate subscription, subscribe from a long-lived component such as an `IHostedService` and
 unsubscribe when it stops. The bus keeps a reference to every handler, so a short-lived object that

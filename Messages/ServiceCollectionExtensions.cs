@@ -12,7 +12,8 @@ namespace Microsoft.Extensions.DependencyInjection
         /// Registers the event bus as a singleton <see cref="IMessageService"/>.
         /// Safe to call any number of times: the bus is registered once, and every
         /// <paramref name="configure"/> callback is applied to its options in registration order,
-        /// so a later callback overrides an earlier one. The container disposes
+        /// so a later callback overrides an earlier one. The callbacks run when the bus is first resolved,
+        /// not at registration, so an invalid value throws then. The container disposes
         /// the bus on shutdown, which stops every subscription.
         /// </summary>
         public static IServiceCollection AddObserverMessage(
@@ -44,6 +45,12 @@ namespace Microsoft.Extensions.DependencyInjection
         /// a new dependency injection scope is created and the handler is resolved from it, so scoped
         /// services are safe to inject and are disposed once the message is handled. Also registers the bus
         /// (see <see cref="AddObserverMessage"/>). Registering the same pair twice has no effect.
+        /// <para>
+        /// If an <see cref="IMessageService"/> is already registered before <c>AddObserverMessage</c> or
+        /// <c>AddMessageHandler</c> is called, the bus factory is skipped and the handlers are not attached to it.
+        /// An existing registration of <typeparamref name="THandler"/> is kept (<c>TryAddScoped</c>): if you
+        /// register it as a singleton yourself, the per-message instance is lost.
+        /// </para>
         /// </summary>
         public static IServiceCollection AddMessageHandler<TMessage, THandler>(this IServiceCollection services)
             where TMessage : IBaseMessage
