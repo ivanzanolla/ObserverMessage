@@ -202,6 +202,22 @@ dotnet run --project ObserverMessage
 dotnet test
 ```
 
+## Continuous integration and releases
+
+The [CI workflow](.github/workflows/ci.yml) builds, tests and packs every pull request and
+every push to `master`.
+
+To publish a version on nuget.org, push a tag named after it:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The tag sets the package version (`v0.1.0` → `0.1.0`); after build and tests pass, the package
+is pushed to nuget.org. This needs a repository secret named `NUGET_API_KEY` holding an API
+key created on nuget.org with push permission for the `ObserverMessage` package.
+
 ## License
 
 Apache License 2.0 — see [LICENSE](LICENSE). If you use or redistribute this code, keep the [NOTICE](NOTICE) file with the attribution to the author.
