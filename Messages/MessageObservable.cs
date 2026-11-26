@@ -32,7 +32,7 @@ namespace Messages
 
         public int Count => _observers.Count;
 
-        public MessageObserver Add(Func<IBaseMessage, bool> filter, Func<IBaseMessage, Task> handler, Action onCompleted = null)
+        public MessageObserver Add(Func<IBaseMessage, bool> filter, Func<IBaseMessage, CancellationToken, Task> handler, Action onCompleted = null)
         {
             var observer = new MessageObserver(filter, handler, _onHandlerError, _boundedCapacity, onCompleted);
             _observers[observer.Id] = observer;
@@ -46,7 +46,7 @@ namespace Messages
 
             var added = Add(
                 _ => true,
-                message =>
+                (message, _) =>
                 {
                     observer.OnNext(message);
                     return Task.CompletedTask;

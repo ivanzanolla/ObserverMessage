@@ -2,6 +2,7 @@ using Messages;
 using Messages.Interfaces;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
+using System.Linq;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -28,8 +29,37 @@ namespace Microsoft.Extensions.DependencyInjection
                 var options = new MessageServiceOptions();
                 foreach (var configurator in sp.GetServices<ObserverMessageConfigurator>())
                     configurator.Apply(options);
-                return new MessageService(options);
+                var bus = new MessageService(options);
+
+                var scopes = sp.GetRequiredService<IServiceScopeFactory>();
+                foreach (var registration in sp.GetServices<MessageHandlerRegistration>())
+                    registration.SubscribeTo(bus, scopes);
+                return bus;
             });
+            return services;
+        }
+
+        /// <summary>
+        /// Subscribes <typeparamref name="THandler"/> to <typeparamref name="TMessage"/>. For every message
+        /// a new dependency injection scope is created and the handler is resolved from it, so scoped
+        /// services are safe to inject and are disposed once the message is handled. Also registers the bus
+        /// (see <see cref="AddObserverMessage"/>). Registering the same pair twice has no effect.
+        /// </summary>
+        public static IServiceCollection AddMessageHandler<TMessage, THandler>(this IServiceCollection services)
+            where TMessage : IBaseMessage
+            where THandler : class, IMessageHandler<TMessage>
+        {
+            if (services == null) throw new ArgumentNullException(nameof(services));
+
+            services.AddObserverMessage();
+            services.TryAddScoped<THandler>();
+
+            var alreadyRegistered = services.Any(d =>
+                d.ServiceType == typeof(MessageHandlerRegistration)
+                && d.ImplementationInstance is MessageHandlerRegistration<TMessage, THandler>);
+            if (!alreadyRegistered)
+                services.AddSingleton<MessageHandlerRegistration>(new MessageHandlerRegistration<TMessage, THandler>());
+
             return services;
         }
     }

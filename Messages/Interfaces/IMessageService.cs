@@ -34,6 +34,12 @@ namespace Messages.Interfaces
         /// <inheritdoc cref="Subscribe{TMessage}(Action{TMessage})"/>
         int Subscribe<TMessage>(Func<TMessage, Task> handler) where TMessage : IBaseMessage;
 
+        /// <summary>
+        /// Subscribes to every message of type <typeparamref name="TMessage"/> (or derived).
+        /// The token is cancelled when this subscription stops, so a long-running handler can end early.
+        /// </summary>
+        int Subscribe<TMessage>(Func<TMessage, CancellationToken, Task> handler) where TMessage : IBaseMessage;
+
         /// <summary>Stops a subscription; its queued messages are discarded. False if the id is unknown.</summary>
         bool Unsubscribe(int subscriptionId);
 
