@@ -9,13 +9,14 @@ namespace Messages
     /// <summary>
     /// A single subscription: a filter, a handler and a private queue (ActionBlock)
     /// that delivers messages one at a time, in order, off the publisher's thread.
+    /// The handler receives a token that is cancelled when the subscription stops.
     /// </summary>
     internal sealed class MessageObserver : IObserver<IBaseMessage>
     {
         private static int _lastId;
 
         private readonly Func<IBaseMessage, bool> _filter;
-        private readonly Func<IBaseMessage, Task> _handler;
+        private readonly Func<IBaseMessage, CancellationToken, Task> _handler;
         private readonly Action<int, IBaseMessage, Exception> _onHandlerError;
         private readonly Action _onCompleted;
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
@@ -23,7 +24,7 @@ namespace Messages
 
         public MessageObserver(
             Func<IBaseMessage, bool> filter,
-            Func<IBaseMessage, Task> handler,
+            Func<IBaseMessage, CancellationToken, Task> handler,
             Action<int, IBaseMessage, Exception> onHandlerError,
             int boundedCapacity,
             Action onCompleted = null)
@@ -69,7 +70,12 @@ namespace Messages
 
             try
             {
-                await _handler(message).ConfigureAwait(false);
+                await _handler(message, _cts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (_cts.IsCancellationRequested)
+            {
+                // The subscription stopped while the handler was running and the handler
+                // honoured the token: that is a clean stop, not a failure.
             }
             catch (Exception ex)
             {

@@ -32,20 +32,56 @@ namespace Messages.Tests
             var services = new ServiceCollection();
             services.AddObserverMessage(o => o.BoundedCapacity = 1);
             using var provider = services.BuildServiceProvider();
-            var bus = provider.GetRequiredService<IMessageService>();
 
-            var gate = new SemaphoreSlim(0);
-            var started = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var dropped = await PublishTwoWhileFirstIsBlocked(provider.GetRequiredService<IMessageService>());
+
+            Assert.Equal(new[] { 2 }, dropped);
+        }
+
+        [Fact]
+        public async Task Options_apply_regardless_of_registration_order()
+        {
+            var services = new ServiceCollection();
+            services.AddObserverMessage();                          // stands in for AddMessageHandler's internal call
+            services.AddObserverMessage(o => o.BoundedCapacity = 1);
+            using var provider = services.BuildServiceProvider();
+
+            var dropped = await PublishTwoWhileFirstIsBlocked(provider.GetRequiredService<IMessageService>());
+
+            Assert.Equal(new[] { 2 }, dropped);
+        }
+
+        [Fact]
+        public async Task AddObserverMessage_after_AddMessageHandler_still_applies_options()
+        {
+            var services = new ServiceCollection();
+            services.AddSingleton<HandlerLog>();
+            services.AddMessageHandler<Ping, BlockingHandler>();     // the real call, which registers the bus itself
+            services.AddObserverMessage(o => o.BoundedCapacity = 1);
+            using var provider = services.BuildServiceProvider();
+            var log = provider.GetRequiredService<HandlerLog>();
+            var bus = provider.GetRequiredService<IMessageService>();
             var dropped = new ConcurrentBag<int>();
             bus.MessageDropped += (_, e) => dropped.Add(((Ping)e.Message).N);
-            bus.Subscribe<Ping>(_ => { started.TrySetResult(true); gate.Wait(); });
 
             bus.Publish(new Ping(1));
-            await started.Task.WithTimeout(TimeSpan.FromSeconds(5));
+            await log.Signal.WaitAsync().WithTimeout(TimeSpan.FromSeconds(5)); // the handler is now blocked on message 1
             bus.Publish(new Ping(2));
 
             Assert.Equal(new[] { 2 }, dropped.ToArray());
-            gate.Release(10);
+        }
+
+        [Fact]
+        public async Task Later_option_callbacks_override_earlier_ones()
+        {
+            var services = new ServiceCollection();
+            services.AddObserverMessage(o => o.BoundedCapacity = 5);
+            services.AddObserverMessage(o => o.BoundedCapacity = 1);
+            using var provider = services.BuildServiceProvider();
+
+            var dropped = await PublishTwoWhileFirstIsBlocked(provider.GetRequiredService<IMessageService>());
+
+            Assert.Equal(new[] { 2 }, dropped);
         }
 
         [Fact]
@@ -60,6 +96,24 @@ namespace Messages.Tests
             provider.Dispose();
 
             Assert.False(bus.Unsubscribe(id));
+        }
+
+        // Blocks a handler on message 1, publishes message 2 and returns the numbers of the dropped messages.
+        private static async Task<int[]> PublishTwoWhileFirstIsBlocked(IMessageService bus)
+        {
+            var gate = new SemaphoreSlim(0);
+            var started = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var dropped = new ConcurrentBag<int>();
+            bus.MessageDropped += (_, e) => dropped.Add(((Ping)e.Message).N);
+            bus.Subscribe<Ping>(_ => { started.TrySetResult(true); gate.Wait(); });
+
+            bus.Publish(new Ping(1));
+            await started.Task.WithTimeout(TimeSpan.FromSeconds(5));
+            bus.Publish(new Ping(2));
+
+            var result = dropped.ToArray();
+            gate.Release(10);
+            return result;
         }
     }
 }

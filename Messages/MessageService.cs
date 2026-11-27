@@ -45,7 +45,7 @@ namespace Messages
             if (handler == null) throw new ArgumentNullException(nameof(handler));
             if (systemName == null) throw new ArgumentNullException(nameof(systemName));
 
-            return _observable.Add(m => string.Equals(m.SystemName, systemName, StringComparison.Ordinal), handler).Id;
+            return _observable.Add(m => string.Equals(m.SystemName, systemName, StringComparison.Ordinal), (m, _) => handler(m)).Id;
         }
 
         public int Subscribe<TMessage>(Action<TMessage> handler) where TMessage : IBaseMessage
@@ -58,7 +58,14 @@ namespace Messages
         {
             if (handler == null) throw new ArgumentNullException(nameof(handler));
 
-            return _observable.Add(m => m is TMessage, m => handler((TMessage)m)).Id;
+            return Subscribe<TMessage>((m, _) => handler(m));
+        }
+
+        public int Subscribe<TMessage>(Func<TMessage, CancellationToken, Task> handler) where TMessage : IBaseMessage
+        {
+            if (handler == null) throw new ArgumentNullException(nameof(handler));
+
+            return _observable.Add(m => m is TMessage, (m, ct) => handler((TMessage)m, ct)).Id;
         }
 
         /// <summary>Subscribes any <see cref="IObserver{T}"/> to every message. Dispose the result to stop.</summary>

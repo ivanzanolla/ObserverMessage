@@ -78,6 +78,9 @@ int id = bus.Subscribe<OrderPlaced>(m => Console.WriteLine($"Order {m.OrderId}")
 // Async handler.
 bus.Subscribe<OrderPlaced>(async m => await SendConfirmationAsync(m.OrderId));
 
+// Async handler that receives a token, cancelled when this subscription stops.
+bus.Subscribe<OrderPlaced>(async (m, ct) => await SendConfirmationAsync(m.OrderId, ct));
+
 // Route by SystemName.
 bus.Subscribe(m => Console.WriteLine($"Received {m.SystemName}"), nameof(OrderPlaced));
 
@@ -87,12 +90,30 @@ bus.Unsubscribe(id);
 
 ### Subscribing in an application with DI
 
-Subscribe from a long-lived component, such as an `IHostedService`, and unsubscribe when it
-stops. The bus keeps a reference to every handler: a short-lived object that subscribes and
-never unsubscribes stays in memory and keeps receiving messages.
+Write a handler class and register it. It can inject anything, including scoped services such as a `DbContext`:
 
-Handlers live as long as the bus, that is for the whole application. **Do not capture scoped
-services** (a `DbContext`, for example) in a handler: create a scope for each message instead.
+```csharp
+public class OrderEmailHandler(IEmailSender email) : IMessageHandler<OrderPlaced>
+{
+    public Task HandleAsync(OrderPlaced message, CancellationToken cancellationToken)
+        => email.SendOrderConfirmationAsync(message.OrderId, cancellationToken);
+}
+
+// Program.cs
+builder.Services.AddObserverMessage();
+builder.Services.AddMessageHandler<OrderPlaced, OrderEmailHandler>();
+```
+
+Every message gets a new scope and a new handler instance, so scoped services are safe and are disposed
+after each message. The `CancellationToken` is cancelled when the subscription stops, for example at
+application shutdown. At shutdown, in-flight handlers may see already-disposed singletons; messages queued
+after the container starts disposing are dropped silently. `UnsubscribeAll()` and `Dispose()` on the bus also
+permanently remove the handler subscriptions registered through the container.
+
+For a delegate subscription, subscribe from a long-lived component such as an `IHostedService` and
+unsubscribe when it stops. The bus keeps a reference to every handler, so a short-lived object that
+subscribes and never unsubscribes stays in memory. **Do not capture scoped services** in the delegate:
+create a scope for each message instead.
 
 ```csharp
 public class OrderEmailSubscriber(IMessageService bus, IServiceScopeFactory scopes) : IHostedService
@@ -103,7 +124,7 @@ public class OrderEmailSubscriber(IMessageService bus, IServiceScopeFactory scop
     {
         _subscriptionId = bus.Subscribe<OrderPlaced>(async order =>
         {
-            using var scope = scopes.CreateScope();
+            await using var scope = scopes.CreateAsyncScope();
             var email = scope.ServiceProvider.GetRequiredService<IEmailSender>();
             await email.SendOrderConfirmationAsync(order.OrderId);
         });
@@ -117,8 +138,6 @@ public class OrderEmailSubscriber(IMessageService bus, IServiceScopeFactory scop
     }
 }
 
-// Program.cs
-builder.Services.AddObserverMessage();
 builder.Services.AddHostedService<OrderEmailSubscriber>();
 ```
 
