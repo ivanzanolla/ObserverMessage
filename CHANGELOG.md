@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows
 [Semantic Versioning](https://semver.org/). While the version is 0.x, minor versions may
 contain breaking changes.
 
-## [0.1.0]
+## [0.1.0] - 2026-11-27
 
 First NuGet release. Compared with the original, unpackaged code (`.NET 8`, `MessageService.Instance`):
 
