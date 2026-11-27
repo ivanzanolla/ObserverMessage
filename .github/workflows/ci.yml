@@ -36,7 +36,7 @@ jobs:
           else
             VERSION="0.0.0-ci.${GITHUB_RUN_NUMBER}"
           fi
-          dotnet pack Messages --configuration Release --no-build --output artifacts -p:Version="$VERSION"
+          dotnet pack ObserverMessage --configuration Release --no-build --output artifacts -p:Version="$VERSION"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -54,7 +54,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Test on .NET Framework 4.8
-        run: dotnet test Messages.Tests --configuration Release --framework net48 --verbosity normal
+        run: dotnet test ObserverMessage.Tests --configuration Release --framework net48 --verbosity normal
 
   publish:
     # Runs only for version tags such as v0.1.0, after build and tests pass.

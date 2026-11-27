@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks.Dataflow;
 
-namespace Messages
+namespace ObserverMessage
 {
     public sealed class MessageServiceOptions
     {

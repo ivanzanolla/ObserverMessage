@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Messages\Messages.csproj" />
+    <ProjectReference Include="..\ObserverMessage\ObserverMessage.csproj" />
   </ItemGroup>
 
 </Project>

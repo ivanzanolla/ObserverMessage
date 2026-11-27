@@ -1,10 +1,9 @@
-﻿using Messages.Interfaces;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Messages
+namespace ObserverMessage
 {
     /// <summary>
     /// In-process event bus built on the Observer pattern.

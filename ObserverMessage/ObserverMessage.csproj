@@ -1,18 +1,38 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
-    <PackageId>ObserverMessage.Demo</PackageId>
-    <IsPackable>false</IsPackable>
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Label="NuGet">
+    <PackageId>ObserverMessage</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>ivanzanolla</Authors>
+    <Description>Lightweight in-process event bus (publish/subscribe) for .NET, built on TPL Dataflow.</Description>
+    <PackageTags>eventbus;pubsub;observer;event-aggregator;dataflow;dependency-injection</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <Copyright>Copyright 2026 Ivan Zanolla</Copyright>
+    <RepositoryUrl>https://github.com/ivanzanolla/ObserverMessage</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReleaseNotes>https://github.com/ivanzanolla/ObserverMessage/blob/master/CHANGELOG.md</PackageReleaseNotes>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Messages\Messages.csproj" />
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\NOTICE" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <InternalsVisibleTo Include="ObserverMessage.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+    <PackageReference Include="System.Threading.Tasks.Dataflow" Version="8.0.1" />
   </ItemGroup>
 
 </Project>

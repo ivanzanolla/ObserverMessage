@@ -1,4 +1,3 @@
-using Messages.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Concurrent;
@@ -7,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace Messages.Tests
+namespace ObserverMessage.Tests
 {
     public class ServiceCollectionExtensionsTests
     {

@@ -1,9 +1,8 @@
-using Messages.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading.Tasks;
 
-namespace Messages
+namespace ObserverMessage
 {
     /// <summary>One <c>AddMessageHandler</c> call, subscribed to the bus when the container creates it.</summary>
     internal abstract class MessageHandlerRegistration

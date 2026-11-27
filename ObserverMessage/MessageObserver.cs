@@ -1,10 +1,9 @@
-﻿using Messages.Interfaces;
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
-namespace Messages
+namespace ObserverMessage
 {
     /// <summary>
     /// A single subscription: a filter, a handler and a private queue (ActionBlock)

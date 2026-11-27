@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Messages.Interfaces
+namespace ObserverMessage
 {
     /// <summary>
     /// In-process event bus. Handlers run off the publisher's thread; each subscription

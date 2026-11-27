@@ -1,7 +1,6 @@
-using Messages.Interfaces;
 using System;
 
-namespace Messages
+namespace ObserverMessage
 {
     public sealed class HandlerErrorEventArgs : EventArgs
     {
