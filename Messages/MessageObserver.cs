@@ -17,7 +17,7 @@ namespace Messages
 
         private readonly Func<IBaseMessage, bool> _filter;
         private readonly Func<IBaseMessage, CancellationToken, Task> _handler;
-        private readonly Action<int, IBaseMessage, Exception> _onHandlerError;
+        private readonly Action<int, IBaseMessage, Exception, Type> _onHandlerError;
         private readonly Action _onCompleted;
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
         private readonly ActionBlock<IBaseMessage> _block;
@@ -25,14 +25,16 @@ namespace Messages
         public MessageObserver(
             Func<IBaseMessage, bool> filter,
             Func<IBaseMessage, CancellationToken, Task> handler,
-            Action<int, IBaseMessage, Exception> onHandlerError,
+            Action<int, IBaseMessage, Exception, Type> onHandlerError,
             int boundedCapacity,
-            Action onCompleted = null)
+            Action onCompleted = null,
+            Type handlerType = null)
         {
             _filter = filter ?? throw new ArgumentNullException(nameof(filter));
             _handler = handler ?? throw new ArgumentNullException(nameof(handler));
             _onHandlerError = onHandlerError;
             _onCompleted = onCompleted;
+            HandlerType = handlerType;
 
             Id = Interlocked.Increment(ref _lastId);
 
@@ -44,6 +46,9 @@ namespace Messages
         }
 
         public int Id { get; }
+
+        /// <summary>The handler class for subscriptions created by <c>AddMessageHandler</c>; null otherwise.</summary>
+        internal Type HandlerType { get; }
 
         public bool IsActive => !_cts.IsCancellationRequested;
 
@@ -83,7 +88,7 @@ namespace Messages
                 // and silently kill this subscription.
                 try
                 {
-                    _onHandlerError?.Invoke(Id, message, ex);
+                    _onHandlerError?.Invoke(Id, message, ex, HandlerType);
                 }
                 catch
                 {

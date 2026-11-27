@@ -17,13 +17,13 @@ namespace Messages
             new ConcurrentDictionary<int, MessageObserver>();
 
         private readonly int _boundedCapacity;
-        private readonly Action<int, IBaseMessage, Exception> _onHandlerError;
-        private readonly Action<int, IBaseMessage> _onDropped;
+        private readonly Action<int, IBaseMessage, Exception, Type> _onHandlerError;
+        private readonly Action<int, IBaseMessage, Type> _onDropped;
 
         public MessageObservable(
             int boundedCapacity,
-            Action<int, IBaseMessage, Exception> onHandlerError,
-            Action<int, IBaseMessage> onDropped)
+            Action<int, IBaseMessage, Exception, Type> onHandlerError,
+            Action<int, IBaseMessage, Type> onDropped)
         {
             _boundedCapacity = boundedCapacity;
             _onHandlerError = onHandlerError;
@@ -32,9 +32,9 @@ namespace Messages
 
         public int Count => _observers.Count;
 
-        public MessageObserver Add(Func<IBaseMessage, bool> filter, Func<IBaseMessage, CancellationToken, Task> handler, Action onCompleted = null)
+        public MessageObserver Add(Func<IBaseMessage, bool> filter, Func<IBaseMessage, CancellationToken, Task> handler, Action onCompleted = null, Type handlerType = null)
         {
-            var observer = new MessageObserver(filter, handler, _onHandlerError, _boundedCapacity, onCompleted);
+            var observer = new MessageObserver(filter, handler, _onHandlerError, _boundedCapacity, onCompleted, handlerType);
             _observers[observer.Id] = observer;
             return observer;
         }
@@ -90,7 +90,7 @@ namespace Messages
             {
                 if (!observer.TryEnqueue(message) && observer.IsActive)
                 {
-                    _onDropped?.Invoke(observer.Id, message);
+                    _onDropped?.Invoke(observer.Id, message, observer.HandlerType);
                 }
             }
         }
