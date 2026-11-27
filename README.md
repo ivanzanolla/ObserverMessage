@@ -236,8 +236,13 @@ git push origin v0.1.0
 ```
 
 The tag sets the package version (`v0.1.0` → `0.1.0`); after build and tests pass, the package
-is pushed to nuget.org. This needs a repository secret named `NUGET_API_KEY` holding an API
-key created on nuget.org with push permission for the `ObserverMessage` package.
+is pushed to nuget.org with [Trusted Publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing):
+the workflow exchanges a GitHub OIDC token for a NuGet API key that lasts one hour, so no
+long-lived key is stored. This needs:
+
+- a Trusted Publishing policy on nuget.org with repository owner `ivanzanolla`, repository
+  `ObserverMessage` and workflow file `ci.yml`;
+- a repository secret named `NUGET_USER` holding the nuget.org profile name (not the email).
 
 ## License
 
