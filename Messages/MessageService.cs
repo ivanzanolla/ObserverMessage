@@ -65,7 +65,15 @@ namespace Messages
         {
             if (handler == null) throw new ArgumentNullException(nameof(handler));
 
-            return _observable.Add(m => m is TMessage, (m, ct) => handler((TMessage)m, ct)).Id;
+            return Subscribe(handler, null);
+        }
+
+        /// <summary>Subscribes a handler class registered through <c>AddMessageHandler</c>, so errors and drops can name it.</summary>
+        internal int Subscribe<TMessage>(Func<TMessage, CancellationToken, Task> handler, Type handlerType) where TMessage : IBaseMessage
+        {
+            if (handler == null) throw new ArgumentNullException(nameof(handler));
+
+            return _observable.Add(m => m is TMessage, (m, ct) => handler((TMessage)m, ct), handlerType: handlerType).Id;
         }
 
         /// <summary>Subscribes any <see cref="IObserver{T}"/> to every message. Dispose the result to stop.</summary>
@@ -87,26 +95,31 @@ namespace Messages
             return Task.CompletedTask;
         };
 
-        private void RaiseHandlerError(int subscriptionId, IBaseMessage message, Exception exception)
+        private static string Describe(int subscriptionId, Type handlerType)
+            => handlerType == null
+                ? $"subscription {subscriptionId}"
+                : $"handler {handlerType.Name} (subscription {subscriptionId})";
+
+        private void RaiseHandlerError(int subscriptionId, IBaseMessage message, Exception exception, Type handlerType)
         {
             var handler = HandlerError;
             if (handler == null)
             {
-                Trace.TraceError($"ObserverMessage: subscription {subscriptionId} failed on '{message.SystemName}': {exception}");
+                Trace.TraceError($"ObserverMessage: {Describe(subscriptionId, handlerType)} failed on '{message.SystemName}': {exception}");
                 return;
             }
-            handler(this, new HandlerErrorEventArgs(subscriptionId, message, exception));
+            handler(this, new HandlerErrorEventArgs(subscriptionId, message, exception, handlerType));
         }
 
-        private void RaiseMessageDropped(int subscriptionId, IBaseMessage message)
+        private void RaiseMessageDropped(int subscriptionId, IBaseMessage message, Type handlerType)
         {
             var handler = MessageDropped;
             if (handler == null)
             {
-                Trace.TraceWarning($"ObserverMessage: subscription {subscriptionId} queue full, dropped '{message.SystemName}'.");
+                Trace.TraceWarning($"ObserverMessage: {Describe(subscriptionId, handlerType)} queue full, dropped '{message.SystemName}'.");
                 return;
             }
-            handler(this, new MessageDroppedEventArgs(subscriptionId, message));
+            handler(this, new MessageDroppedEventArgs(subscriptionId, message, handlerType));
         }
     }
 }

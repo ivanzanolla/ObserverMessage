@@ -163,10 +163,12 @@ public class BusErrorLogger(IMessageService bus, ILogger<BusErrorLogger> logger)
     }
 
     private void OnError(object? sender, HandlerErrorEventArgs e) =>
-        logger.LogError(e.Exception, "Subscription {Id} failed on {Message}",
-            e.SubscriptionId, e.Message.SystemName);
+        logger.LogError(e.Exception, "Handler {Handler} (subscription {Id}) failed on {Message}",
+            e.HandlerType?.Name, e.SubscriptionId, e.Message.SystemName);
 }
 ```
+
+`HandlerType` is the handler class for subscriptions created by `AddMessageHandler`, and `null` for delegate and `IObserver` subscriptions (`MessageDropped` has it too).
 
 ## Bounded queues (backpressure)
 
