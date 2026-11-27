@@ -132,7 +132,9 @@ namespace Messages.Tests
         public void Dispose()
         {
             _bus.Publish(new Ping(1));
-            Thread.Sleep(200); // let the queued invocation run while the container is disposing
+            // The bus is bounded to one message: the queue counts the invocation in progress, so this
+            // completes only once message 1 has finished, i.e. it ran while the container was disposing.
+            _bus.PublishAsync(new Ping(2)).WithTimeout(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
         }
     }
 
@@ -147,10 +149,12 @@ namespace Messages.Tests
             foreach (var disposable in _disposables) disposable.Dispose();
         }
 
-        private (ServiceProvider Provider, IMessageService Bus, HandlerLog Log) Build(Action<IServiceCollection> addHandlers)
+        private (ServiceProvider Provider, IMessageService Bus, HandlerLog Log) Build(
+            Action<IServiceCollection> addHandlers,
+            Action<MessageServiceOptions> configure = null)
         {
             var services = new ServiceCollection()
-                .AddObserverMessage()
+                .AddObserverMessage(configure)
                 .AddSingleton<HandlerLog>()
                 .AddScoped<ScopeProbe>()
                 .AddScoped<AsyncOnlyResource>();
@@ -314,13 +318,13 @@ namespace Messages.Tests
             {
                 s.AddMessageHandler<Ping, RecordingHandler>();
                 s.AddSingleton<ShutdownPublisher>();
-            });
+            }, o => o.BoundedCapacity = 1);
             var errors = new ConcurrentQueue<HandlerErrorEventArgs>();
             bus.HandlerError += (_, e) => errors.Enqueue(e);
             // Resolved after the bus, so the container disposes it first, while the bus still runs.
             provider.GetRequiredService<ShutdownPublisher>();
 
-            provider.Dispose(); // ShutdownPublisher.Dispose publishes and waits for the invocation to settle
+            provider.Dispose(); // ShutdownPublisher.Dispose publishes and waits until the queued invocation has finished
 
             Assert.Empty(errors); // a container that is gone is a clean stop, not a handler failure
             Assert.Empty(log.Entries);
