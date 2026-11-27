@@ -1,11 +1,10 @@
-using Messages.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace Messages.Tests
+namespace ObserverMessage.Tests
 {
     public sealed class DiagnosticsProbe : IDisposable
     {

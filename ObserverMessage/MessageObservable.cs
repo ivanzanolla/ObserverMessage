@@ -1,11 +1,10 @@
-﻿using Messages.Interfaces;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Messages
+namespace ObserverMessage
 {
     /// <summary>
     /// The subject of the Observer pattern: keeps the observers and forwards each

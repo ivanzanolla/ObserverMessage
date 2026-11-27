@@ -1,4 +1,4 @@
-﻿namespace Messages.Interfaces
+﻿namespace ObserverMessage
 {
     public interface IBaseMessage
     {

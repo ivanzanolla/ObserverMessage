@@ -36,7 +36,7 @@ The container disposes the bus on shutdown, which stops every subscription.
 A message is a class that derives from `BaseMessage` and passes its `SystemName`.
 
 ```csharp
-using Messages;
+using ObserverMessage;
 
 public class OrderPlaced : BaseMessage
 {
@@ -50,7 +50,7 @@ public class OrderPlaced : BaseMessage
 ## 3. Publish
 
 ```csharp
-using Messages.Interfaces;
+using ObserverMessage;
 
 public class OrderService(IMessageService bus)
 {
@@ -212,14 +212,14 @@ using var bus = new MessageService(new MessageServiceOptions { BoundedCapacity =
 
 ## Repository
 
-- `Messages/` — the library: `MessageService`, `MessageObservable` (the subject),
+- `ObserverMessage/` — the library (namespace `ObserverMessage`): `MessageService`, `MessageObservable` (the subject),
   `MessageObserver` (one per subscription, wraps an `ActionBlock`), `Unsubscriber`
   (the `IDisposable` token), `BaseMessage`, `AddObserverMessage()`
-- `ObserverMessage/` — console demo: two subscribers, 1000 published messages
-- `Messages.Tests/` — xUnit tests
+- `ObserverMessage.Demo/` — console demo: two subscribers, 1000 published messages
+- `ObserverMessage.Tests/` — xUnit tests
 
 ```bash
-dotnet run --project ObserverMessage
+dotnet run --project ObserverMessage.Demo
 dotnet test
 ```
 

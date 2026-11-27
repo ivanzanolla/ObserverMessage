@@ -1,6 +1,4 @@
-﻿using Messages.Interfaces;
-
-namespace Messages
+﻿namespace ObserverMessage
 {
     public abstract class BaseMessage : IBaseMessage
     {

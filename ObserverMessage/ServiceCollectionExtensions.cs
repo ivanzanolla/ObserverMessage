@@ -1,5 +1,4 @@
-using Messages;
-using Messages.Interfaces;
+using ObserverMessage;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
 using System.Linq;

@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace Messages.Tests
+namespace ObserverMessage.Tests
 {
     /// <summary>Task.WaitAsync is not available on .NET Framework: this works on every target.</summary>
     internal static class TaskTimeoutExtensions

@@ -1,8 +1,7 @@
-﻿using Messages.Interfaces;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 
-namespace ObserverMessage
+namespace ObserverMessage.Demo
 {
     class Program
     {

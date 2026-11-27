@@ -1,6 +1,4 @@
-﻿using Messages;
-
-namespace ObserverMessage
+﻿namespace ObserverMessage.Demo
 {
     public class Message : BaseMessage
     {

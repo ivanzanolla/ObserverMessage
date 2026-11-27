@@ -1,5 +1,3 @@
-using Messages;
-using Messages.Interfaces;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
@@ -7,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace Messages.Tests
+namespace ObserverMessage.Tests
 {
     public class Ping : BaseMessage
     {

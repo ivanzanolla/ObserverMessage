@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Messages.Interfaces
+namespace ObserverMessage
 {
     /// <summary>
     /// Handles messages of type <typeparamref name="TMessage"/>. Register it with
